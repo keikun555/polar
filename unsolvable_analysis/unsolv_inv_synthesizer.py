@@ -259,6 +259,7 @@ class UnsolvInvSynthesizer:
         program: Program,
         k: Union[Number, int, None] = None,
     ):
+        candidate_vars = [Symbol(str(v), real=True) for v in candidate_vars]
         rec_builder = RecBuilder(program)
         candidate, candidate_rec, candidate_coefficients = cls.construct_candidate(
             candidate_vars, inv_deg, program

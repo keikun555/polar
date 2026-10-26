@@ -29,6 +29,15 @@ def assert_specified_proportional(general_expr, equal_expr):
     """
     general_expr = sympify(general_expr)
     equal_expr = sympify(equal_expr)
+    # equal_expr is a bare sympify() of a hardcoded expected-answer string, so its symbols carry
+    # no assumptions -- but general_expr's symbols (the actual synthesizer output) can (e.g. the
+    # iteration counter n is integer=True). Symbols that compare equal but carry different
+    # assumptions hash differently, breaking the simplify()/is_zero checks below, so match
+    # equal_expr's symbols to general_expr's by name rather than assuming a single assumption set.
+    by_name = {s.name: s for s in general_expr.free_symbols}
+    equal_expr = equal_expr.xreplace(
+        {s: by_name[s.name] for s in equal_expr.free_symbols if s.name in by_name}
+    )
     substitutions = {}
     for sym in general_expr.free_symbols:
         if str(sym).startswith("_"):

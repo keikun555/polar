@@ -139,7 +139,7 @@ class TerminationAnalyzer:
         closed_forms = {}
 
         for symbol in symbols:
-            symbol = sympify(str(symbol))
+            symbol = Symbol(str(symbol), real=True)
             if symbol not in solvers:
                 recurrences = recurrence_builder.get_recurrences(symbol)
                 s = RecurrenceSolver(recurrences)

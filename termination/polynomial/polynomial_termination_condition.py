@@ -22,7 +22,7 @@ class PolynomialTerminationCondition:
         self.terminates_negative = terminates_negative
 
     def get_witness(self) -> TerminationWitness:
-        n = Symbol('n')
+        n = Symbol('n', integer=True)
         # n = next((sym for sym in self.poly.free_symbols if str(sym) == 'n'), n)
         # print(self.poly.free_symbols)
         # print(n)
