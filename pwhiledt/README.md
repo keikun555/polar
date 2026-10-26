@@ -1,15 +1,41 @@
-# pWhile-dt → Polar translator
+# pWhile-dt on Polar
 
-Translates ProbContLogic's `\pwhiledt` program-listing syntax (paper.tex / notes/new-examples.tex)
-into Polar's `.prob` input language, so Polar's exact closed-form moment engine can be run against
-these examples directly.
+Runs ProbContLogic's `\pwhiledt` example programs (`paper.tex` / `notes/new-examples.tex`) through
+Polar's exact closed-form moment engine, and checks candidate invariants and ranking functions for
+them instead of only deriving new ones from scratch. Three pieces, all on this `pwhiledt` branch:
 
-See `translate.py`'s module docstring for the semantic mapping (drift/diffuse/sample/clamp) and the
-Polar-side gotchas it works around (identifier mangling for sympy/Polar reserved names; the loop's
-clock guard, e.g. `t < T`, is emitted literally and solved by Polar itself via
-`--solve_deterministic_guards`, added to this fork specifically for this -- see below).
+* `pwhiledt/translate.py` -- translates a `\pwhiledt` program into Polar's `.prob` input language
+* `invariant_checker.py` -- confirms (or refutes, or honestly reports "can't decide") a candidate
+  equality/inequality between moments
+* `ranking_checker.py` -- confirms a candidate decreasing/increasing (ranking) function
 
-Usage:
+## Requirements
+
+* Python 3.12 (the pinned dependencies below do not install on newer Pythons)
+
+## Layout
+
+* `pwhiledt/translate.py`: the `\pwhiledt` → `.prob` translator; see its module docstring for the
+  semantic mapping (drift/diffuse/sample/clamp) and the Polar-side gotchas it works around
+  (identifier mangling for sympy/Polar reserved names; deterministic clock guards, see below)
+* `pwhiledt/benchmarks/*.pwhiledt`: the example programs
+* `invariant_checker.py`, `ranking_checker.py` (repo root): the two checkers, standalone scripts in
+  the same style as `translate.py` -- no changes to `polar.py`/`cli/`. They *check* a candidate
+  invariant or ranking function someone already wrote down, rather than deriving one from scratch
+  the way `--invariants`/`--termination` do. See each script's module docstring for full usage.
+* `pwhiledt/bench.py`: runs every check in "Validated examples" below and reports wall-clock timing
+* `tests/test_invariant_checker.py`, `tests/test_ranking_checker.py`,
+  `tests/test_pwhiledt_bench.py`: their tests
+
+## Setup
+
+From the repo root, with Python 3.12 on `PATH`:
+```
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+## Running
 
 ```
 .venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/<name>.pwhiledt -o /tmp/<name>.prob
@@ -21,6 +47,16 @@ guard (no crash, no rejection) but can't auto-evaluate at a concrete `n` since t
 itself stays symbolic -- pass `--at_n <n>` explicitly for that, substituting `n = T/dt` by hand, same
 as before this feature existed. With `T`/`dt` both concrete numbers, `--at_n` isn't needed at all:
 the exact crossing count is solved and applied automatically.
+
+See "Validated examples" below for `invariant_checker.py`/`ranking_checker.py` commands against the
+examples in the table, or run them all at once with timing:
+```
+.venv/bin/python pwhiledt/bench.py [--trials N] [-o results.csv]
+```
+This is deliberately not a WhileDT-`brench.py`-style harness -- there is one backend here (sympy, via
+Polar) and seven examples, with nothing to time out or compare against, so a TOML-driven multi-solver
+sweep would be pure overhead. `bench.py` just runs the known commands and reports mean wall-clock time
+per step.
 
 ## Known limitations
 
@@ -52,10 +88,9 @@ properly; not yet investigated to completion.
 
 All of the following have no boundary mechanism and are confirmed working end to end, with Polar's
 exact output checked against the paper's/addendum's own claimed result. The "Checked via" column
-gives the exact `invariant_checker.py` verdict for a candidate matching that claim -- see
-`invariant_checker.py`/`ranking_checker.py` below for what these standalone scripts do and why a
-verdict of `PASS` is a real check (not an eyeballed comparison) while `UNKNOWN` is an honestly
-reported gap, never a false `PASS`:
+gives the exact `invariant_checker.py` verdict for a candidate matching that claim (see "Layout"
+above for what these standalone scripts do) -- a verdict of `PASS` is a real check (not an eyeballed
+comparison), while `UNKNOWN` is an honestly reported gap, never a false `PASS`:
 
 | Benchmark | Goal | Polar's exact closed form | Matches | Checked via `invariant_checker.py` |
 |---|---|---|---|---|
@@ -102,10 +137,3 @@ sympy can't find closed-form roots of the coupled 3-variable characteristic poly
 in both `dt` and `tau` at once (`NotImplementedError: sorted roots not supported over ZZ[dt,tau]`).
 Untried: holding one of `dt`/`tau` numeric, or `--numeric_roots`. Since `invariant_checker.py` needs
 a closed form to substitute into, this benchmark is untestable by it regardless.
-
-## Candidate checking: `invariant_checker.py` / `ranking_checker.py`
-
-Two standalone scripts at the repo root (same pattern as `translate.py`: their own small `argparse`,
-no changes to `polar.py`/`cli/`) that *check* a candidate invariant or ranking function someone
-already wrote down, rather than deriving one from scratch the way `--invariants`/`--termination` do.
-See each script's module docstring for full usage, and the table above for worked examples.
