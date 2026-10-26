@@ -147,9 +147,8 @@ class UnsolvInvSynthesizer:
             recs = rec_builder.get_recurrences(monom)
             rec_solver = RecurrenceSolver(recs)
             effective_part_solution += coeff * rec_solver.get(monom)
-        effective_part_solution = effective_part_solution.xreplace(
-            {sympify("n"): sympify("n") - 1}
-        )
+        n = Symbol("n", integer=True)
+        effective_part_solution = effective_part_solution.xreplace({n: n - 1})
         return effective_part_solution
 
     @classmethod
@@ -244,7 +243,7 @@ class UnsolvInvSynthesizer:
         initial_candidate = cls.__get_init_value_candidate__(candidate, rec_builder)
         for solution in solutions:
             ans = solve_rec_by_summing(
-                rec_coeff=k.xreplace(solution) if isinstance(k, Symbol) else k,
+                rec_coeff=sympify(k).xreplace(solution) if isinstance(k, Symbol) else k,
                 init_value=initial_candidate.xreplace(solution),
                 inhom_part=sympify(effective_part_solution).xreplace(solution),
             )
