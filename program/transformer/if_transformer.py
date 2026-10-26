@@ -42,23 +42,16 @@ class IfTransformer(TreeTransformer):
                 else And(not_previous, conditions[i])
             )
 
-            # Remember variables which appear in a condition and are assigned within the branch
-            current_rename_subs = {}
+            # Remember variables which appear in a condition and are assigned
+            # within the branch or any previous one
             for assign in branch:
                 if assign.variable in condition_symbols:
-                    if assign.variable in rename_subs:
-                        current_rename_subs[assign.variable] = rename_subs[
-                            assign.variable
-                        ]
-                    else:
-                        current_rename_subs[assign.variable] = Symbol(
+                    if assign.variable not in rename_subs:
+                        rename_subs[assign.variable] = Symbol(
                             get_unique_var(name="old"), real=True
                         )
-                        rename_subs[assign.variable] = current_rename_subs[
-                            assign.variable
-                        ]
             extra_condition = current_condition.copy().simplify()
-            extra_condition.subs(current_rename_subs)
+            extra_condition.subs(rename_subs)
 
             # Add the branch conditions to the assignments
             for assign in branch:
