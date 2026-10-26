@@ -51,20 +51,61 @@ properly; not yet investigated to completion.
 ## Validated examples (7/23 across paper.tex §5 and notes/new-examples.tex)
 
 All of the following have no boundary mechanism and are confirmed working end to end, with Polar's
-exact output checked against the paper's/addendum's own claimed result:
+exact output checked against the paper's/addendum's own claimed result. The "Checked via" column
+gives the exact `invariant_checker.py` verdict for a candidate matching that claim -- see
+`invariant_checker.py`/`ranking_checker.py` below for what these standalone scripts do and why a
+verdict of `PASS` is a real check (not an eyeballed comparison) while `UNKNOWN` is an honestly
+reported gap, never a false `PASS`:
 
-| Benchmark | Goal | Polar's exact closed form | Matches |
-|---|---|---|---|
-| `bm1d.pwhiledt` (`prog:1bm`) | `E(x**2)` | `dt*n` | paper: `E[x^2]=T` |
-| `bm2d.pwhiledt` (`prog:2bm`) | `E(x**2+y**2)` | `2*dt*n` | paper: `E[\|\|(x,y)\|\|^2]=2T` |
-| `bm3d.pwhiledt` (`prog:3bm`) | `E(x**2+y**2+z**2)` | `3*dt*n` | paper: `3T` |
-| `bm2d.pwhiledt` | `E((x**2-t)*y)` | `0` (exact, every n) | new-examples \S1: exact conservation |
-| `bm3d.pwhiledt` | `E((x**2-t)*y*z)` | `0` (exact, every n) | new-examples \S1: exact conservation |
-| `gbm.pwhiledt` (`prog:gbm`) | `E(s)` | `(1+mu*dt)**n` | exact GBM discrete mean |
-| `ou_process.pwhiledt` (`prog:ou-process`) | `E(x)` | closed form converging to `mu` | OU mean-reversion |
-| `integrated_langevin.pwhiledt` (new-examples \S3) | `E(x**2+v**2)` | exact closed form in `n` | stronger than the paper's Gronwall bound (linear system, solved exactly) |
+| Benchmark | Goal | Polar's exact closed form | Matches | Checked via `invariant_checker.py` |
+|---|---|---|---|---|
+| `bm1d.pwhiledt` (`prog:1bm`) | `E(x**2)` | `dt*n` | paper: `E[x^2]=T` | `PASS` |
+| `bm2d.pwhiledt` (`prog:2bm`) | `E(x**2+y**2)` | `2*dt*n` | paper: `E[\|\|(x,y)\|\|^2]=2T` | `PASS` |
+| `bm3d.pwhiledt` (`prog:3bm`) | `E(x**2+y**2+z**2)` | `3*dt*n` | paper: `3T` | `PASS` |
+| `bm2d.pwhiledt` | `E((x**2-t)*y)` | `0` (exact, every n) | new-examples \S1: exact conservation | `PASS` |
+| `bm3d.pwhiledt` | `E((x**2-t)*y*z)` | `0` (exact, every n) | new-examples \S1: exact conservation | `PASS` |
+| `gbm.pwhiledt` (`prog:gbm`) | `E(s)` | `(1+mu*dt)**n` | exact GBM discrete mean | `PASS` |
+| `ou_process.pwhiledt` (`prog:ou-process`) | `E(m)` | closed form converging to `mu` | OU mean-reversion: `mu*(1-(1-theta*dt)**n)` | `UNKNOWN` (see below) |
+| `integrated_langevin.pwhiledt` (new-examples \S3) | `E(x**2+v**2)` | exact closed form in `n` | stronger than the paper's Gronwall bound (linear system, solved exactly) | `PASS` (self-equality sanity check) |
+
+Example commands (`PASS` rows):
+```
+.venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm1d.pwhiledt -o /tmp/bm1d.prob
+.venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n" --solve_deterministic_guards
+
+.venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm2d.pwhiledt -o /tmp/bm2d.prob
+.venv/bin/python invariant_checker.py /tmp/bm2d.prob "E((x**2-t)*y)" "==" "0" --solve_deterministic_guards
+```
+
+The clock remainder `v_t - t` -- the natural ranking function for every example's deterministic
+clock guard -- is confirmed decreasing by exactly `dt` each iteration via `ranking_checker.py`:
+```
+.venv/bin/python ranking_checker.py /tmp/bm1d.prob "v_t - t" --positive dt --solve_deterministic_guards
+```
+
+**Two real, honestly-reported gaps in what `invariant_checker.py` can automatically decide** (both
+return `UNKNOWN`, never a false `PASS`):
+- **Comparisons against a literal `exp(...)` of a continuous parameter.** E.g. the GBM/OU mean and
+  variance bounds in paper.tex rely on the inequality `1+x <= exp(x)`, comparing a discrete closed
+  form like `(1+mu*dt)**n` against `exp(mu*T)`. The checker has no notion of this inequality and
+  correctly refuses to guess: `invariant_checker.py /tmp/gbm.prob "E(m)" "<=" "E(exp(mu*v_t))"
+  --solve_deterministic_guards` reports `UNKNOWN`.
+- **Exponentials with mixed symbolic-integer exponents.** The OU process's own exact closed form for
+  `E(m)` is algebraically equal to `mu*(1-(1-theta*dt)**n)` (confirmed numerically at several `n`),
+  but neither `sympy`'s `.expand()`/`.simplify()` nor `.equals()` can prove this symbolically --
+  terms like `(-dt*theta+1)**(2*n-1)` vs. `(-dt*theta+1)**n` don't combine automatically when the
+  exponent itself contains the free symbol `n`. This is a real limit of the underlying CAS, not a
+  shortcut taken by this checker.
 
 `rotational3dbm.pwhiledt` has no boundary mechanism either, but hits a *different*, unrelated wall:
 sympy can't find closed-form roots of the coupled 3-variable characteristic polynomial symbolically
 in both `dt` and `tau` at once (`NotImplementedError: sorted roots not supported over ZZ[dt,tau]`).
-Untried: holding one of `dt`/`tau` numeric, or `--numeric_roots`.
+Untried: holding one of `dt`/`tau` numeric, or `--numeric_roots`. Since `invariant_checker.py` needs
+a closed form to substitute into, this benchmark is untestable by it regardless.
+
+## Candidate checking: `invariant_checker.py` / `ranking_checker.py`
+
+Two standalone scripts at the repo root (same pattern as `translate.py`: their own small `argparse`,
+no changes to `polar.py`/`cli/`) that *check* a candidate invariant or ranking function someone
+already wrote down, rather than deriving one from scratch the way `--invariants`/`--termination` do.
+See each script's module docstring for full usage, and the table above for worked examples.
