@@ -28,9 +28,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BENCHMARKS_DIR = REPO_ROOT / "pwhiledt" / "benchmarks"
 PYTHON = sys.executable
 
-# Each entry: benchmark stem -> list of (label, script, extra_args). `--solve_deterministic_guards`
-# is appended automatically; the benchmark's translated .prob path is inserted as the first
-# positional argument. These are exactly the commands pwhiledt/README.md's examples table cites.
+# Each entry: benchmark stem -> list of (label, script, extra_args); the benchmark's translated
+# .prob path is inserted as the first positional argument. These are exactly the commands
+# pwhiledt/README.md's examples table cites.
 CHECKS = {
     "bm1d": [
         ("invariant: E(x**2)==dt*n", "invariant_checker.py", ["E(x**2)", "==", "dt*n"]),
@@ -99,7 +99,7 @@ def main():
         rows.append((stem, "translate", times, None))
 
         for label, script, extra_args in checks:
-            cmd = [PYTHON, script, str(prob_path), *extra_args, "--solve_deterministic_guards"]
+            cmd = [PYTHON, script, str(prob_path), *extra_args]
             times, result = time_command(cmd, args.trials)
             verdict = extract_verdict(result.stdout)
             rows.append((stem, label, times, verdict))

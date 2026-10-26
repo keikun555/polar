@@ -36,10 +36,9 @@ end
 """
 
 
-def run_checker(benchmark_path, lhs, op, rhs):
+def run_checker(benchmark_path, lhs, op, rhs, *extra_args):
     result = subprocess.run(
-        [sys.executable, "invariant_checker.py", str(benchmark_path), lhs, op, rhs,
-         "--solve_deterministic_guards"],
+        [sys.executable, "invariant_checker.py", str(benchmark_path), lhs, op, rhs, *extra_args],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -71,6 +70,15 @@ class InvariantCheckerTest(unittest.TestCase):
         result = run_checker(benchmark, "E(m)", "<=", "E(exp(mu*v_t))")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Holds for every iteration n: UNKNOWN", result.stdout)
+
+    def test_at_n_checks_the_postcondition_at_a_concrete_iteration(self):
+        # v_t/dt are left symbolic in this fixture, so the crossing point isn't auto-known --
+        # --at_n must be passed explicitly for the postcondition line to appear at all.
+        benchmark = Path(self._make_tmp("bm1d.prob", BM1D_PROB))
+        result = run_checker(benchmark, "E(x**2)", "==", "dt*n", "--at_n", "5")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Holds for every iteration n: PASS", result.stdout)
+        self.assertIn("Holds as a postcondition at n=5: PASS", result.stdout)
 
     def _make_tmp(self, name, content):
         import tempfile

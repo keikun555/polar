@@ -13,17 +13,21 @@ It reuses Polar's existing machinery directly:
   - inputparser.GoalParser._sympify_reals for the real=True symbol-assumption idiom
 
 Usage:
-    .venv/bin/python invariant_checker.py <benchmark.prob> "<LHS>" "<OP>" "<RHS>"
-        [--solve_deterministic_guards] [--at_n N]
+    .venv/bin/python invariant_checker.py <benchmark.prob> "<LHS>" "<OP>" "<RHS>" [--at_n N]
 
     OP is one of: == <= >= < >
     LHS/RHS are each either `E(<expr>)` (a moment of program variables) or a bare expression in
     the program's untouched parameters (e.g. "dt*n", "0", "E(exp(mu*T))" -- see below).
 
+    Every pwhiledt example has a deterministic clock guard, so this script always solves it
+    (settings.solve_deterministic_guards = True unconditionally) -- there is no benchmark in this
+    project without one, so this isn't exposed as a flag.
+
 Examples:
     .venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm2d.pwhiledt -o /tmp/bm2d.prob
     .venv/bin/python invariant_checker.py /tmp/bm2d.prob "E((x**2-t)*y)" "==" "0"
-    .venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n" --solve_deterministic_guards
+    .venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n"
+    .venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n" --at_n 5
 """
 
 import argparse
@@ -129,12 +133,6 @@ def main():
     parser.add_argument("op", choices=["==", "<=", ">=", "<", ">"], help="Relation between LHS and RHS")
     parser.add_argument("rhs", help="Right-hand side of the candidate, e.g. 'dt*n'")
     parser.add_argument(
-        "--solve_deterministic_guards",
-        action="store_true",
-        default=False,
-        help="Solve a deterministic clock guard (e.g. 't < T') for its exact crossing iteration count",
-    )
-    parser.add_argument(
         "--at_n",
         type=int,
         default=-1,
@@ -142,7 +140,7 @@ def main():
     )
     args = parser.parse_args()
 
-    settings.solve_deterministic_guards = args.solve_deterministic_guards
+    settings.solve_deterministic_guards = True
 
     program = parse_program(args.benchmark)
     program = normalize_program(program)

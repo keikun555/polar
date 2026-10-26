@@ -103,19 +103,28 @@ comparison), while `UNKNOWN` is an honestly reported gap, never a false `PASS`:
 | `ou_process.pwhiledt` (`prog:ou-process`) | `E(m)` | closed form converging to `mu` | OU mean-reversion: `mu*(1-(1-theta*dt)**n)` | `UNKNOWN` (see below) |
 | `integrated_langevin.pwhiledt` (new-examples \S3) | `E(x**2+v**2)` | exact closed form in `n` | stronger than the paper's Gronwall bound (linear system, solved exactly) | `PASS` (self-equality sanity check) |
 
-Example commands (`PASS` rows):
+Example commands (`PASS` rows); `invariant_checker.py`/`ranking_checker.py` always solve the
+deterministic clock guard themselves (there's no pwhiledt example without one), so neither needs a
+flag for it:
 ```
 .venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm1d.pwhiledt -o /tmp/bm1d.prob
-.venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n" --solve_deterministic_guards
+.venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n"
 
 .venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm2d.pwhiledt -o /tmp/bm2d.prob
-.venv/bin/python invariant_checker.py /tmp/bm2d.prob "E((x**2-t)*y)" "==" "0" --solve_deterministic_guards
+.venv/bin/python invariant_checker.py /tmp/bm2d.prob "E((x**2-t)*y)" "==" "0"
+```
+
+With `T`/`dt` left symbolic (the usual case), pass `invariant_checker.py`'s own `--at_n <n>` to
+additionally check the candidate as a postcondition at a concrete iteration, since the crossing
+point itself stays symbolic otherwise:
+```
+.venv/bin/python invariant_checker.py /tmp/bm1d.prob "E(x**2)" "==" "dt*n" --at_n 5
 ```
 
 The clock remainder `v_t - t` -- the natural ranking function for every example's deterministic
 clock guard -- is confirmed decreasing by exactly `dt` each iteration via `ranking_checker.py`:
 ```
-.venv/bin/python ranking_checker.py /tmp/bm1d.prob "v_t - t" --positive dt --solve_deterministic_guards
+.venv/bin/python ranking_checker.py /tmp/bm1d.prob "v_t - t" --positive dt
 ```
 
 **Two real, honestly-reported gaps in what `invariant_checker.py` can automatically decide** (both
@@ -123,8 +132,8 @@ return `UNKNOWN`, never a false `PASS`):
 - **Comparisons against a literal `exp(...)` of a continuous parameter.** E.g. the GBM/OU mean and
   variance bounds in paper.tex rely on the inequality `1+x <= exp(x)`, comparing a discrete closed
   form like `(1+mu*dt)**n` against `exp(mu*T)`. The checker has no notion of this inequality and
-  correctly refuses to guess: `invariant_checker.py /tmp/gbm.prob "E(m)" "<=" "E(exp(mu*v_t))"
-  --solve_deterministic_guards` reports `UNKNOWN`.
+  correctly refuses to guess: `invariant_checker.py /tmp/gbm.prob "E(m)" "<=" "E(exp(mu*v_t))"`
+  reports `UNKNOWN`.
 - **Exponentials with mixed symbolic-integer exponents.** The OU process's own exact closed form for
   `E(m)` is algebraically equal to `mu*(1-(1-theta*dt)**n)` (confirmed numerically at several `n`),
   but neither `sympy`'s `.expand()`/`.simplify()` nor `.equals()` can prove this symbolically --

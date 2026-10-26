@@ -15,20 +15,24 @@ itself depend on a loop variable) -- exactly the case for every translated examp
 function, the clock remainder "v_t - t" (decreases by exactly "dt" each step, independent of the
 loop guard). A candidate whose delta is guard-dependent is reported UNKNOWN rather than attempting
 an unsound guess; boundedness-below is not separately checked (the candidates checked here are the
-clock remainder itself, whose boundedness is already established by --solve_deterministic_guards
-solving the exact crossing point).
+clock remainder itself, whose boundedness is already established by solving the deterministic
+guard's exact crossing point -- this script always does so, see below).
 
 Usage:
     .venv/bin/python ranking_checker.py <benchmark.prob> "<candidate>"
-        [--direction decreasing|increasing] [--positive PARAM ...] [--solve_deterministic_guards]
+        [--direction decreasing|increasing] [--positive PARAM ...]
 
 `--positive` asserts a parameter (e.g. "dt") is strictly positive -- Polar's own parameter symbols
 carry no domain assumptions, so without this a step size is, correctly, treated as an unconstrained
 real and the checker reports UNKNOWN rather than guessing its sign.
 
+Every pwhiledt example has a deterministic clock guard, so this script always solves it
+(settings.solve_deterministic_guards = True unconditionally) -- there is no benchmark in this
+project without one, so this isn't exposed as a flag.
+
 Example:
     .venv/bin/python pwhiledt/translate.py pwhiledt/benchmarks/bm1d.pwhiledt -o /tmp/bm1d.prob
-    .venv/bin/python ranking_checker.py /tmp/bm1d.prob "v_t - t" --positive dt --solve_deterministic_guards
+    .venv/bin/python ranking_checker.py /tmp/bm1d.prob "v_t - t" --positive dt
 """
 
 import argparse
@@ -120,15 +124,9 @@ def main():
         help="Parameters asserted to be strictly positive (e.g. 'dt'), since Polar's own parameter "
         "symbols carry no domain assumptions by default",
     )
-    parser.add_argument(
-        "--solve_deterministic_guards",
-        action="store_true",
-        default=False,
-        help="Solve a deterministic clock guard (e.g. 't < T') for its exact crossing iteration count",
-    )
     args = parser.parse_args()
 
-    settings.solve_deterministic_guards = args.solve_deterministic_guards
+    settings.solve_deterministic_guards = True
 
     program = parse_program(args.benchmark)
     program = normalize_program(program)

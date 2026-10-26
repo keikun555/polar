@@ -27,8 +27,7 @@ end
 
 def run_checker(benchmark_path, candidate, *extra_args):
     result = subprocess.run(
-        [sys.executable, "ranking_checker.py", str(benchmark_path), candidate,
-         "--solve_deterministic_guards", *extra_args],
+        [sys.executable, "ranking_checker.py", str(benchmark_path), candidate, *extra_args],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
