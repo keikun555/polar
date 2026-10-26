@@ -1,6 +1,7 @@
 from typing import List
 
 from singledispatchmethod import singledispatchmethod
+from sympy import Symbol
 
 from program.condition import TrueCond, And, Not, Condition
 from program.ifstatem import IfStatem
@@ -50,8 +51,8 @@ class IfTransformer(TreeTransformer):
                             assign.variable
                         ]
                     else:
-                        current_rename_subs[assign.variable] = get_unique_var(
-                            name="old"
+                        current_rename_subs[assign.variable] = Symbol(
+                            get_unique_var(name="old"), real=True
                         )
                         rename_subs[assign.variable] = current_rename_subs[
                             assign.variable

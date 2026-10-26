@@ -1,0 +1,11 @@
+cont t,u1,u2,u3;
+t := 0; u1 := u10; u2 := u20; u3 := u30;
+while (t < T) {
+  t  += dt;
+  u1 += -tau * u1 * dt;
+  u2 += -tau * u2 * dt;
+  u3 += -tau * u3 * dt;
+  u1 += (u2 - u3) * db;
+  u2 += (u3 - u1) * db;
+  u3 += (u1 - u2) * db;
+}

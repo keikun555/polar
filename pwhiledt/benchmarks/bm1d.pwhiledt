@@ -1,0 +1,4 @@
+cont t,x; t,x := 0;
+while (t < T) {
+  t += dt; x += db;
+}

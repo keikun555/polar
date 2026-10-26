@@ -1,0 +1,8 @@
+cont t,m,x,theta,mu,sigma;
+t := 0; x,m := 0;
+while (t < T) {
+  t += dt;
+  m += -theta * (m - mu) * dt;
+  x += -theta * (x - mu) * dt;
+  x += sigma * db;
+}

@@ -57,6 +57,13 @@ class GoalsAction(Action):
         self.program = program
         self.rec_builder = rec_builder
         self.solvers = {}
+        if self.cli_args.at_n < 0:
+            known_iteration_count = getattr(program, "known_iteration_count", None)
+            # Only auto-apply when it's a concrete number: --at_n is otherwise compared via
+            # `>= 0`/`< 0` by every goal handler, which can't be evaluated to a definite bool for
+            # a still-symbolic count (e.g. ceiling(bigt/dt) with bigt/dt left as free parameters).
+            if known_iteration_count is not None and not known_iteration_count.free_symbols:
+                self.cli_args.at_n = int(known_iteration_count)
 
     def parse_goals(self):
         if self.cli_args.invariants and not self.cli_args.goals:

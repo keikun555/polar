@@ -13,6 +13,7 @@ def _set_settings(args):
     settings.numeric_croots = args.numeric_croots
     settings.numeric_eps = args.numeric_eps
     settings.trivial_guard = args.trivial_guard
+    settings.solve_deterministic_guards = args.solve_deterministic_guards
     settings.exact_func_moments = args.exact_func_moments
 
 
@@ -218,6 +219,16 @@ class ArgumentParser:
             action="store_true",
             default=settings.trivial_guard,
             help="If set any loop guard will be overridden with 'true'",
+        )
+        self.argument_parser.add_argument(
+            "--solve_deterministic_guards",
+            action="store_true",
+            default=settings.solve_deterministic_guards,
+            help=(
+                "If set, a loop guard depending only on deterministic (non-probabilistic) "
+                "variables updated by a pure affine self-recurrence (e.g. a clock `t := t + dt`) "
+                "is solved for its exact crossing iteration count instead of being rejected"
+            ),
         )
         self.argument_parser.add_argument(
             "--after_loop",

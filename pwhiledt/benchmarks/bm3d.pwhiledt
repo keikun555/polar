@@ -1,0 +1,4 @@
+cont t,x; t,x,y,z := 0;
+while (t < T) {
+  t += dt; x += db; y += db; z += db;
+}

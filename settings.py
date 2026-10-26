@@ -22,5 +22,11 @@ numeric_eps: float = 1e-10
 # If set any loop guard will be overridden with 'true'
 trivial_guard: bool = False
 
+# If set, a loop guard that depends only on deterministic (non-probabilistic) variables updated by
+# a pure affine self-recurrence (e.g. a clock `t := t + dt`) is solved for its exact crossing
+# iteration count instead of being rejected by ConditionsNormalizer; see
+# program/transformer/deterministic_guard.py and LoopGuardTransformer.
+solve_deterministic_guards: bool = False
+
 # If true, moments of functions of distributions which would be transcendental won't be approximated by rationals
 exact_func_moments: bool = False

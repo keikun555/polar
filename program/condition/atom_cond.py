@@ -52,7 +52,7 @@ class Atom(Condition):
             self.poly2 = S.Zero
             return []
 
-        new_var = sympify(get_unique_var(name="r"))
+        new_var = Symbol(get_unique_var(name="r"), real=True)
         store[self.copy()] = new_var
         alias = self.poly1 - self.poly2
         self.poly1 = new_var

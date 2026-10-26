@@ -1,0 +1,8 @@
+cont t,X,V;
+t,X,V := 0;
+while (t < T) {
+  t += dt;
+  X += V * dt;
+  V += -gamma * V * dt;
+  V += sigma * db;
+}
